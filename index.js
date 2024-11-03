@@ -19,6 +19,7 @@ mongoose.connect(process.env.MONGO_URI)
 const ItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     description: String,
+    amount: {type: Number}
 });
 
 const Item = mongoose.model('Item', ItemSchema);

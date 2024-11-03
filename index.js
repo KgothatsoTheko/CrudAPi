@@ -5,6 +5,20 @@ const dotenv = require('dotenv')
 dotenv.config()
 const mongoose = require('mongoose')
 
+const admin = require('firebase-admin');
+
+const firebaseConfig = {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+  privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  clientId: process.env.FIREBASE_CLIENT_ID,
+};
+
+admin.initializeApp({
+  credential: admin.credential.cert(firebaseConfig),
+});
+
 //middleware
 app.use(express.json())
 app.use(cors())
@@ -30,6 +44,25 @@ app.post('/add-items', async (req, res) => {
     try {
         const newItem = new Item(req.body);
         const savedItem = await newItem.save();
+
+         // Send a push notification when a new task is added
+         const message = {
+            notification: {
+                title: 'New Task Added',
+                body: `Task: ${savedItem.name}`
+            },
+            topic: 'tasks'  // Subscribe users to the 'tasks' topic
+        };
+
+        // Send the notification to all clients subscribed to 'tasks'
+        admin.messaging().send(message)
+            .then(response => {
+                console.log('Notification sent successfully:', response);
+            })
+            .catch(error => {
+                console.error('Error sending notification:', error);
+            });
+
         res.status(200).send(savedItem);
     } catch (err) {
         res.status(500).json({ error: err.message });
